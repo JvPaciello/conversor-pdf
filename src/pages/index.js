@@ -11,6 +11,8 @@ export default function Home() {
           name="description"
           content="Converta Word, Excel, PowerPoint e Imagens para PDF gratuitamente, sem login. Simples, rápido e ideal para estudantes!"
         />
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2458442591696135"
+     crossorigin="anonymous"></script>
       </Head>
 
       <main className={styles.main}>
