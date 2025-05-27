@@ -132,8 +132,54 @@
     font-size: 1rem;
     color: #444;
   }
+
+  .cookieBanner {
   
-  
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0; 
+  color: #fff;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1000;
+}
+
+.cookieBanner button {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+  .footer {
+  background: transparent;
+  margin-top: 3rem;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #666;
+  background: #0a0a0a;
+}
+
+.footerLinks {
+  margin-top: 0.8rem;
+}
+
+.footerLinks a {
+  margin: 0 0.75rem;
+  text-decoration: none;
+  color: #0070f3;
+  font-weight: 500;
+}
+
+.footerLinks a:hover {
+  text-decoration: underline;
+}
+
   /* Responsive styles */
   @media (max-width: 768px) {
     .mobileMenuButton {

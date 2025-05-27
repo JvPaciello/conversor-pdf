@@ -35,7 +35,6 @@ export default function Navbar() {
         <div className={`${styles.navLinks} ${isOpen ? styles.showMenu : ''}`}>
           <Link href="/conversores/word-para-pdf">Word</Link>
           <Link href="/conversores/excel-para-pdf">Excel</Link>
-          <Link href="/conversores/powerpoint-para-pdf">PowerPoint</Link>
           <Link href="/conversores/jpg-para-pdf">JPG</Link>
         </div>
       </div>
