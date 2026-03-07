@@ -2,12 +2,9 @@ import { Html, Head, Main, NextScript } from "next/document";
 
 export default function Document() {
   return (
-    <Html lang="en">
-      <Head>
-      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2458442591696135"
-     crossorigin="anonymous"></script>
-      </Head>
-      <body>
+    <Html lang="pt-BR" className="dark">
+      <Head />
+      <body className="antialiased bg-neutral-950 text-neutral-50 overflow-x-hidden">
         <Main />
         <NextScript />
       </body>
