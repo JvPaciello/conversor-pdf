@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@vercel/analytics": "^1.5.0",
+    "docx-preview": "^0.3.7",
     "html2pdf.js": "^0.14.0",
     "lucide-react": "^0.577.0",
     "mammoth": "^1.11.0",
