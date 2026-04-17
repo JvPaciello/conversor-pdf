@@ -1,7 +1,7 @@
 import Head from 'next/head';
 
 const SITE_URL = 'https://www.converterpdfbr.com.br';
-const OG_IMAGE = `${SITE_URL}/og-image.png`;
+const OG_IMAGE = `${SITE_URL}/api/og`;
 
 export default function SEOHead({ title, description, path = '/', jsonLd }) {
   const canonical = `${SITE_URL}${path}`;

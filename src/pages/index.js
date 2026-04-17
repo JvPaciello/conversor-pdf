@@ -34,6 +34,17 @@ const jsonLd = {
         'Ferramenta online gratuita para converter Word, Excel e Imagens para PDF diretamente no navegador, sem upload para servidores.',
     },
     {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: 'ConverterPDF BR',
+      url: `${SITE_URL}/`,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/logo.png`,
+      },
+      sameAs: [],
+    },
+    {
       '@type': 'FAQPage',
       mainEntity: [
         {
