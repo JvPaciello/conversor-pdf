@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#14182B"/>
+  <path d="M17 11h20l10 10v32H17z" fill="#FFFFFF"/>
+  <path d="M37 11v10h10z" fill="#A194FF"/>
+  <g id="detail" stroke="#C9CEDB" stroke-width="2.5" stroke-linecap="round">
+    <path d="M22.5 20h9M22.5 26h19"/>
+  </g>
+  <g transform="rotate(-10 32 40)">
+    <rect id="stamp" x="20.5" y="34" width="23" height="12" rx="2.5" fill="none" stroke="#3A2BC4" stroke-width="2.75"/>
+    <rect id="stamp-text" x="25.5" y="38.5" width="13" height="3" rx="1.5" fill="#3A2BC4"/>
+  </g>
+</svg>

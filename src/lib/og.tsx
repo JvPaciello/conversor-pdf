@@ -33,23 +33,33 @@ function Badge({ label, family }: { label: string; family: FileFormat['family'] 
   );
 }
 
-// Static instances of the site's typeface (OFL); images are rendered at build time.
-function loadFonts() {
-  const dir = join(process.cwd(), 'src/assets');
-  return Promise.all([readFile(join(dir, 'archivo-500.ttf')), readFile(join(dir, 'archivo-semiexpanded-800.ttf'))]);
+// Static instances of the site's typeface (OFL) and the logo; images are rendered at build time.
+function loadAssets() {
+  const root = process.cwd();
+  return Promise.all([
+    readFile(join(root, 'src/assets/archivo-500.ttf')),
+    readFile(join(root, 'src/assets/archivo-semiexpanded-800.ttf')),
+    readFile(join(root, 'public/logo.svg'), 'base64'),
+  ]);
 }
 
 /** Shared social preview: the title on the desk, a stamped sheet beside it. */
 export async function ogImage({ title, formats }: { title: string; formats: FileFormat[] }) {
   const shown = formats.filter((f) => f.ext !== 'jpeg');
-  const [regular, heavy] = await loadFonts();
+  const [regular, heavy, logo] = await loadAssets();
   return new ImageResponse(
     (
       <div
         style={{ display: 'flex', width: '100%', height: '100%', background: NAVY, padding: 72, fontFamily: 'Archivo' }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', width: 700 }}>
-          <div style={{ display: 'flex', fontSize: 30, fontWeight: 800, color: STAMP }}>ConverterPDF BR</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 30, fontWeight: 800, color: '#fff' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- rendered by next/og, not the browser */}
+            <img src={`data:image/svg+xml;base64,${logo}`} width={56} height={56} alt="" />
+            <div style={{ display: 'flex' }}>
+              ConverterPDF<span style={{ color: STAMP, marginLeft: 8 }}>BR</span>
+            </div>
+          </div>
           <div style={{ display: 'flex', fontSize: 62, fontWeight: 800, lineHeight: 1.08, color: '#fff', letterSpacing: -1.5 }}>
             {title}
           </div>
