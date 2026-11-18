@@ -22,7 +22,7 @@ const isPdf = (file: File) => extensionOf(file.name) === 'pdf';
 
 export function MergeConverter({ initialFiles }: { initialFiles?: File[] }) {
   const [items, setItems] = useState<Item[]>(() => toItems((initialFiles ?? []).slice(0, MAX_MERGE_FILES)));
-  const [overflow, setOverflow] = useState(false);
+  const [overflow, setOverflow] = useState(() => (initialFiles?.length ?? 0) > MAX_MERGE_FILES);
   const [pageCounts, setPageCounts] = useState<Map<File, number | null>>(() => new Map());
   const { state, run, reset } = useConversion();
   const hasItems = items.length > 0;

@@ -185,17 +185,17 @@ export const TOOLS: Tool[] = [
     steps: [
       { title: 'Escolha os arquivos', text: 'Arraste PDFs, documentos, planilhas ou imagens para a folha ou toque em “Escolher arquivos”. Dá para adicionar mais depois.' },
       { title: 'Organize', text: 'Coloque os arquivos na ordem certa com as setas e remova o que não quiser.' },
-      { title: 'Baixe o PDF', text: 'Toque em “Juntar em um PDF”. As páginas de todos os arquivos são combinadas e o PDF é baixado em seguida.' },
+      { title: 'Baixe o PDF', text: 'Toque no botão “Juntar”. As páginas de todos os arquivos são combinadas e o PDF é baixado em seguida.' },
     ],
     notes: [
-      'As páginas dos PDFs são copiadas como estão: texto, links internos de página e imagens mantêm a qualidade original.',
+      'As páginas dos PDFs são copiadas como estão: o texto continua selecionável e as imagens mantêm a qualidade original. Marcadores (sumário lateral) e campos de formulário não são mantidos.',
       'Documentos, planilhas e imagens são convertidos com as opções padrão (A4, todas as abas visíveis da planilha). Para ajustar, converta antes no conversor específico e junte o PDF aqui.',
-      `Até ${MAX_MERGE_FILES} arquivos por vez. PDFs protegidos por senha não podem ser juntados.`,
+      `Até ${MAX_MERGE_FILES} arquivos por vez. PDFs protegidos (por senha ou com restrição de edição) não podem ser juntados.`,
     ],
     faqs: [
       {
         q: 'Como juntar vários PDFs em um só?',
-        a: 'Selecione os arquivos, coloque na ordem desejada com as setas e toque em “Juntar em um PDF”. O arquivo combinado é baixado em seguida.',
+        a: 'Selecione os arquivos, coloque na ordem desejada com as setas e toque no botão “Juntar”. O arquivo combinado é baixado em seguida.',
       },
       {
         q: 'Posso juntar PDF com Word, Excel e fotos?',

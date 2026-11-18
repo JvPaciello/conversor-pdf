@@ -12,6 +12,7 @@ const IMAGES = new Set(['jpg', 'jpeg', 'png', 'webp']);
 export async function filesToPdf(files: File[], onProgress?: ProgressFn): Promise<PdfResult> {
   const total = files.length + 1; // the final merge counts as one step
   const sources: PdfSource[] = [];
+  onProgress?.(0, total);
   for (const [index, file] of files.entries()) {
     sources.push({ name: file.name, bytes: await toPdfBytes(file) });
     onProgress?.(index + 1, total);
@@ -51,6 +52,7 @@ async function convert(file: File, ext: string): Promise<PdfResult> {
     const sheets = listSheets(workbook)
       .filter((s) => !s.hidden && !s.empty)
       .map((s) => s.name);
+    if (sheets.length === 0) throw new ConversionError('A planilha não tem dados para converter.');
     return workbookToPdf(workbook, {
       sheets,
       orientation: 'auto',

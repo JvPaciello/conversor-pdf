@@ -51,7 +51,7 @@ async function loadSource({ name, bytes }: PdfSource): Promise<PDFDocument> {
   } catch (error) {
     if (error instanceof EncryptedPDFError) {
       throw new ConversionError(
-        `O arquivo “${name}” está protegido por senha. Remova a proteção e tente de novo.`,
+        `O arquivo “${name}” está protegido (por senha ou com restrição de edição) e não pode ser combinado. Remova a proteção e tente de novo.`,
       );
     }
     throw new ConversionError(`Não foi possível ler “${name}”. O arquivo pode estar corrompido ou não ser um PDF.`);
