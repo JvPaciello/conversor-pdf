@@ -24,8 +24,8 @@ npx jest src/lib/pdf/__tests__/page-cuts.test.ts   # single test file
 
 ### Layers
 
-- `src/lib/tools.ts` — single source of truth for the three tools: route, accepted formats, page copy (lead, steps, notes, FAQs), metadata. Home, nav, footer, sitemap and tool pages all read from it.
-- `src/lib/pdf/` — framework-free PDF generation. Pure modules (`win-ansi`, `image-info`, `page-layout`, `page-cuts`, `sheet-table`, `excel-to-pdf`, `text-to-pdf`) are unit-tested under the Node environment. `docx-to-pdf` and `images-to-pdf` need a real browser (iframe, canvas, `Image`).
+- `src/lib/tools.ts` — single source of truth for the four tools (Word, Excel, Imagem, Juntar): route, accepted formats, page copy (lead, steps, notes, FAQs), metadata. Home, nav, footer, sitemap and tool pages all read from it.
+- `src/lib/pdf/` — framework-free PDF generation. Pure modules (`win-ansi`, `image-info`, `page-layout`, `page-cuts`, `sheet-table`, `excel-to-pdf`, `text-to-pdf`) are unit-tested under the Node environment. `merge-pdf` (pdf-lib) is pure too. `docx-to-pdf`, `images-to-pdf` and `files-to-pdf` (converts any accepted file with default options, then merges) need a real browser (iframe, canvas, `Image`).
 - `src/components/converter/` — client components. `useConversion` holds idle/working/done/error state and triggers the download; each converter loads its `lib/pdf` module with dynamic `import()` (and preloads it once a file is chosen) so heavy libraries stay out of the initial bundle.
 - `src/components/tool-page.tsx` — shared server layout for the tool routes (breadcrumb, JSON-LD, steps, FAQ).
 

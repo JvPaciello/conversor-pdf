@@ -121,7 +121,7 @@ export function Dropzone({ formats, onFiles, buttonLabel, title, multiple = fals
 function rejectionMessage(rejected: File[], formats: FileFormat[]): string {
   const ext = extensionOf(rejected[0].name);
   if (ext === 'doc') return 'Arquivos .doc (Word 97–2003) não são aceitos. Abra no Word e salve como .docx.';
-  if (ext === 'pdf') return 'Esse arquivo já está em PDF.';
+  if (ext === 'pdf') return 'Esse arquivo já está em PDF. Para combiná-lo com outros arquivos, use o Juntar PDF.';
   const names = rejected.length > 1 ? `“${rejected[0].name}” e mais ${rejected.length - 1}` : `“${rejected[0].name}”`;
   const list = formats.filter((f) => f.ext !== 'jpeg').map((f) => `.${f.ext}`).join(', ');
   return `${names} não ${rejected.length > 1 ? 'são aceitos' : 'é aceito'} aqui. Formatos aceitos: ${list}.`;

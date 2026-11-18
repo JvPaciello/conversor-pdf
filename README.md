@@ -9,14 +9,15 @@
 | `/conversores/word-para-pdf` | `.docx`, `.txt` | O `.docx` é montado com `docx-preview` num iframe isolado, respeitando as quebras de página salvas pelo Word. Cada página é capturada com `html2canvas-pro`, sem cortar linhas ao meio. Também dá para imprimir como PDF com texto selecionável. O `.txt` vira PDF com texto real (UTF-8 ou Windows-1252). |
 | `/conversores/excel-para-pdf` | `.xlsx`, `.xls`, `.ods`, `.csv` | Lido com SheetJS e desenhado com `jspdf-autotable`: texto selecionável, uma aba por página, cores de preenchimento, células mescladas, colunas e linhas ocultas, números no formato brasileiro. |
 | `/conversores/jpg-para-pdf` | `.jpg`, `.png`, `.webp` | JPG e PNG entram no PDF sem recompressão. Fotos com rotação EXIF são endireitadas. Permite reordenar as imagens e escolher tamanho de página, orientação e margem. |
+| `/conversores/juntar-pdf` | `.pdf` e todos os formatos acima | Junta vários arquivos em um único PDF, na ordem escolhida. As páginas dos PDFs são copiadas com `pdf-lib`, sem recompressão; os outros formatos são convertidos com as opções padrão antes de entrar. |
 
-A página inicial tem um conversor universal que identifica o tipo de arquivo e abre o conversor certo.
+A página inicial tem um conversor universal que identifica o tipo de arquivo e abre o conversor certo. PDFs, vários arquivos de tipos diferentes ou vários documentos vão para o Juntar PDF.
 
 ## Stack
 
 - [Next.js 16](https://nextjs.org/) (App Router, páginas estáticas) e React 19, em TypeScript
 - Tailwind CSS v4 com tokens em CSS e tema claro/escuro pelo `prefers-color-scheme`
-- `jspdf`, `jspdf-autotable`, `docx-preview`, `html2canvas-pro` e SheetJS (`xlsx`, via CDN oficial), todos carregados sob demanda
+- `jspdf`, `jspdf-autotable`, `pdf-lib`, `docx-preview`, `html2canvas-pro` e SheetJS (`xlsx`, via CDN oficial), todos carregados sob demanda
 - Jest + Testing Library
 
 ## Desenvolvimento

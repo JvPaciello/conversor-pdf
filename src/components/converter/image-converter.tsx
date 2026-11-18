@@ -6,7 +6,7 @@ import type { MarginSize, Orientation, PageSize } from '@/lib/pdf/page-layout';
 import { formatBytes, pdfName } from '@/lib/format';
 import { getTool, MAX_IMAGES } from '@/lib/tools';
 import { Dropzone } from './dropzone';
-import { ErrorNote, Progress, ResultPanel, Segmented } from './parts';
+import { ErrorNote, IconButton, Progress, ResultPanel, Segmented } from './parts';
 import { useConversion } from './use-conversion';
 
 const tool = getTool('imagem');
@@ -201,29 +201,4 @@ function Thumbnail({ file }: { file: File }) {
   );
   // eslint-disable-next-line @next/next/no-img-element -- local blob URL, nothing to optimize
   return <img ref={ref} alt="" decoding="async" className="size-12 shrink-0 rounded bg-paper object-cover" />;
-}
-
-function IconButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: {
-  label: string;
-  disabled?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="flex size-10 items-center justify-center rounded-md text-ink-2 hover:bg-paper hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
-    >
-      {children}
-    </button>
-  );
 }

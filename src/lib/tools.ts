@@ -1,7 +1,7 @@
 import { extensionOf } from './format';
 
-export type ToolId = 'word' | 'excel' | 'imagem';
-export type FormatFamily = 'doc' | 'sheet' | 'image';
+export type ToolId = 'word' | 'excel' | 'imagem' | 'juntar';
+export type FormatFamily = 'doc' | 'sheet' | 'image' | 'pdf';
 
 export interface FileFormat {
   ext: string;
@@ -29,8 +29,14 @@ export interface Tool {
 const doc = (ext: string): FileFormat => ({ ext, family: 'doc' });
 const sheet = (ext: string): FileFormat => ({ ext, family: 'sheet' });
 const image = (ext: string): FileFormat => ({ ext, family: 'image' });
+const pdf = (ext: string): FileFormat => ({ ext, family: 'pdf' });
 
 export const MAX_IMAGES = 100;
+export const MAX_MERGE_FILES = 50;
+
+const DOC_FORMATS = [doc('docx'), doc('txt')];
+const SHEET_FORMATS = [sheet('xlsx'), sheet('xls'), sheet('ods'), sheet('csv')];
+const IMAGE_FORMATS = [image('jpg'), image('jpeg'), image('png'), image('webp')];
 
 export const TOOLS: Tool[] = [
   {
@@ -39,7 +45,7 @@ export const TOOLS: Tool[] = [
     name: 'Word para PDF',
     navLabel: 'Word',
     family: 'doc',
-    formats: [doc('docx'), doc('txt')],
+    formats: DOC_FORMATS,
     multiple: false,
     headline: 'Converter Word para PDF',
     lead: 'Transforme documentos .docx e arquivos de texto em PDF mantendo fontes, tabelas, imagens e quebras de página. A conversão acontece no seu navegador.',
@@ -82,7 +88,7 @@ export const TOOLS: Tool[] = [
     name: 'Excel para PDF',
     navLabel: 'Excel',
     family: 'sheet',
-    formats: [sheet('xlsx'), sheet('xls'), sheet('ods'), sheet('csv')],
+    formats: SHEET_FORMATS,
     multiple: false,
     headline: 'Converter Excel para PDF',
     lead: 'Transforme planilhas .xlsx, .xls, .ods e .csv em PDF com tabelas legíveis, cores de preenchimento e células mescladas. Você escolhe quais abas entram no arquivo.',
@@ -125,7 +131,7 @@ export const TOOLS: Tool[] = [
     name: 'Imagem para PDF',
     navLabel: 'Imagens',
     family: 'image',
-    formats: [image('jpg'), image('jpeg'), image('png'), image('webp')],
+    formats: IMAGE_FORMATS,
     multiple: true,
     headline: 'Converter JPG e PNG para PDF',
     lead: 'Junte fotos e imagens JPG, PNG ou WebP em um único PDF, na ordem que você escolher. Fotos tiradas com o celular ficam na posição certa.',
@@ -162,6 +168,49 @@ export const TOOLS: Tool[] = [
       },
     ],
   },
+  {
+    id: 'juntar',
+    path: '/conversores/juntar-pdf',
+    name: 'Juntar PDF',
+    navLabel: 'Juntar',
+    family: 'pdf',
+    formats: [pdf('pdf'), ...DOC_FORMATS, ...SHEET_FORMATS, ...IMAGE_FORMATS],
+    multiple: true,
+    headline: 'Juntar PDF e outros arquivos em um só PDF',
+    lead: 'Combine vários PDFs em um único arquivo, na ordem que você escolher. Dá para misturar documentos Word, planilhas e fotos: eles são convertidos e entram no mesmo PDF.',
+    summary: 'Vários PDFs, documentos, planilhas e imagens em um único PDF.',
+    metaTitle: 'Juntar PDF grátis: combine vários arquivos em um único PDF',
+    metaDescription:
+      'Junte vários PDFs em um só arquivo online, de graça e sem cadastro. Misture também Word, Excel e imagens, escolha a ordem e baixe um único PDF. Sem upload.',
+    steps: [
+      { title: 'Escolha os arquivos', text: 'Arraste PDFs, documentos, planilhas ou imagens para a folha ou toque em “Escolher arquivos”. Dá para adicionar mais depois.' },
+      { title: 'Organize', text: 'Coloque os arquivos na ordem certa com as setas e remova o que não quiser.' },
+      { title: 'Baixe o PDF', text: 'Toque no botão “Juntar”. As páginas de todos os arquivos são combinadas e o PDF é baixado em seguida.' },
+    ],
+    notes: [
+      'As páginas dos PDFs são copiadas como estão: o texto continua selecionável e as imagens mantêm a qualidade original. Marcadores (sumário lateral) e campos de formulário não são mantidos.',
+      'Documentos, planilhas e imagens são convertidos com as opções padrão (A4, todas as abas visíveis da planilha). Para ajustar, converta antes no conversor específico e junte o PDF aqui.',
+      `Até ${MAX_MERGE_FILES} arquivos por vez. PDFs protegidos (por senha ou com restrição de edição) não podem ser juntados.`,
+    ],
+    faqs: [
+      {
+        q: 'Como juntar vários PDFs em um só?',
+        a: 'Selecione os arquivos, coloque na ordem desejada com as setas e toque no botão “Juntar”. O arquivo combinado é baixado em seguida.',
+      },
+      {
+        q: 'Posso juntar PDF com Word, Excel e fotos?',
+        a: 'Sim. Arquivos .docx, .txt, .xlsx, .xls, .ods, .csv, .jpg, .png e .webp são convertidos para PDF e entram na posição em que estão na lista.',
+      },
+      {
+        q: 'A qualidade dos PDFs diminui?',
+        a: 'Não. As páginas são copiadas sem recompressão, então o texto continua selecionável e as imagens mantêm a resolução original.',
+      },
+      {
+        q: 'Meus arquivos são enviados para algum servidor?',
+        a: 'Não. Tudo é lido, convertido e combinado pelo seu navegador. Os arquivos não saem do seu aparelho.',
+      },
+    ],
+  },
 ];
 
 export const HOME_FAQS = [
@@ -175,7 +224,7 @@ export const HOME_FAQS = [
   },
   {
     q: 'Quais formatos posso converter?',
-    a: 'Documentos Word (.docx) e texto (.txt), planilhas (.xlsx, .xls, .ods, .csv) e imagens (.jpg, .png, .webp).',
+    a: 'Documentos Word (.docx) e texto (.txt), planilhas (.xlsx, .xls, .ods, .csv) e imagens (.jpg, .png, .webp). Também dá para juntar vários PDFs, e misturar esses formatos, em um único arquivo.',
   },
   {
     q: 'Funciona no celular?',
@@ -202,5 +251,10 @@ export function toolForFile(fileName: string): Tool | undefined {
   return TOOLS.find((t) => matchesFormats(fileName, t.formats));
 }
 
+/** Every format, once each. */
+export const ACCEPTED_FORMATS: FileFormat[] = TOOLS.flatMap((t) => t.formats).filter(
+  (f, i, all) => all.findIndex((g) => g.ext === f.ext) === i,
+);
+
 /** Every format, without the jpeg/jpg duplicate, for display. */
-export const ALL_FORMATS: FileFormat[] = TOOLS.flatMap((t) => t.formats).filter((f) => f.ext !== 'jpeg');
+export const ALL_FORMATS: FileFormat[] = ACCEPTED_FORMATS.filter((f) => f.ext !== 'jpeg');
