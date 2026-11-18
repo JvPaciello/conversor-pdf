@@ -69,7 +69,7 @@ export default function Home() {
               Converta arquivos em PDF sem enviar nada para a internet
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-2 sm:text-xl">
-              Word, Excel e imagens viram PDF aqui mesmo, no seu navegador. Grátis, sem cadastro e sem limite de uso.
+              Word, Excel e imagens viram PDF aqui mesmo, no seu navegador, e vários arquivos podem virar um só PDF. Grátis, sem cadastro e sem limite de uso.
             </p>
           </div>
           <div className="sheet p-5 sm:p-8">

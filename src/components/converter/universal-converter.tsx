@@ -1,26 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { TOOLS, toolForFile, type Tool } from '@/lib/tools';
+import { ACCEPTED_FORMATS, getTool, MAX_MERGE_FILES, toolForFile, type Tool } from '@/lib/tools';
 import { Dropzone } from './dropzone';
 import { ToolConverter } from './tool-converter';
-
-const ALL_FORMATS = TOOLS.flatMap((t) => t.formats);
 
 /** Home-page converter: accepts any supported file and picks the right tool. */
 export function UniversalConverter() {
   const [pick, setPick] = useState<{ tool: Tool; files: File[]; key: number } | null>(null);
 
   const choose = (files: File[]) => {
-    const tool = toolForFile(files[0].name);
+    const tools = new Set(files.map((f) => toolForFile(f.name)?.id));
+    // One file, or only images: open that converter. Anything else is joined into one PDF.
+    const tool = files.length === 1 || (tools.size === 1 && tools.has('imagem')) ? toolForFile(files[0].name) : getTool('juntar');
     if (!tool) return;
-    const same = files.filter((f) => toolForFile(f.name)?.id === tool.id);
-    setPick({ tool, files: tool.multiple ? same : same.slice(0, 1), key: Date.now() });
+    setPick({ tool, files: tool.id === 'juntar' ? files.slice(0, MAX_MERGE_FILES) : files, key: Date.now() });
   };
 
   if (!pick) {
     return (
-      <Dropzone formats={ALL_FORMATS} multiple onFiles={choose} title="Solte seu arquivo aqui" buttonLabel="Escolher arquivo" />
+      <Dropzone formats={ACCEPTED_FORMATS} multiple onFiles={choose} title="Solte seus arquivos aqui" buttonLabel="Escolher arquivos" />
     );
   }
 
