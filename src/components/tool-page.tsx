@@ -88,7 +88,7 @@ export function ToolPage({ tool }: { tool: Tool }) {
         <aside className="space-y-12 lg:pt-2">
           <section aria-labelledby="como-converter">
             <h2 id="como-converter" className="heading text-2xl">
-              Como converter
+              {tool.id === 'editar' ? 'Como editar' : 'Como converter'}
             </h2>
             <ol className="mt-6 space-y-6">
               {tool.steps.map((step, i) => (

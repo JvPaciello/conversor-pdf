@@ -7,7 +7,7 @@ describe('tools', () => {
     expect(toolForFile('vendas.ods')?.id).toBe('excel');
     expect(toolForFile('dados.csv')?.id).toBe('excel');
     expect(toolForFile('foto.jpeg')?.id).toBe('imagem');
-    expect(toolForFile('relatorio.pdf')?.id).toBe('juntar');
+    expect(toolForFile('relatorio.pdf')?.id).toBe('editar');
     expect(toolForFile('antigo.doc')).toBeUndefined();
   });
 

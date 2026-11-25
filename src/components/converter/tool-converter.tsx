@@ -4,12 +4,14 @@ import type { ToolId } from '@/lib/tools';
 import { ExcelConverter } from './excel-converter';
 import { ImageConverter } from './image-converter';
 import { MergeConverter } from './merge-converter';
+import { EditConverter } from './pdf-editor/edit-converter';
 import { WordConverter } from './word-converter';
 
 const CONVERTERS = {
   word: WordConverter,
   excel: ExcelConverter,
   imagem: ImageConverter,
+  editar: EditConverter,
   juntar: MergeConverter,
 } satisfies Record<ToolId, React.ComponentType<{ initialFiles?: File[] }>>;
 

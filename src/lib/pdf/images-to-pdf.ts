@@ -6,7 +6,7 @@ import { ConversionError, finish, type PdfResult } from './result';
 // iOS Safari refuses canvases above ~16.7 million pixels.
 const MAX_CANVAS_PIXELS = 16_000_000;
 
-interface PreparedImage {
+export interface PreparedImage {
   data: Uint8Array;
   format: 'JPEG' | 'PNG';
   width: number;
@@ -36,7 +36,7 @@ export async function imagesToPdf(files: File[], options: PageOptions, onProgres
   return finish(pdf!);
 }
 
-async function prepareImage(file: File): Promise<PreparedImage> {
+export async function prepareImage(file: File): Promise<PreparedImage> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const type = detectImageType(bytes);
 

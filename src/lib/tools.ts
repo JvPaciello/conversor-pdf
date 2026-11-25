@@ -1,6 +1,6 @@
 import { extensionOf } from './format';
 
-export type ToolId = 'word' | 'excel' | 'imagem' | 'juntar';
+export type ToolId = 'word' | 'excel' | 'imagem' | 'editar' | 'juntar';
 export type FormatFamily = 'doc' | 'sheet' | 'image' | 'pdf';
 
 export interface FileFormat {
@@ -169,6 +169,50 @@ export const TOOLS: Tool[] = [
     ],
   },
   {
+    id: 'editar',
+    path: '/conversores/editar-pdf',
+    name: 'Editar PDF',
+    navLabel: 'Editar',
+    family: 'pdf',
+    formats: [pdf('pdf')],
+    multiple: false,
+    headline: 'Editar PDF online',
+    lead: 'Escreva, assine, desenhe, destaque e tape trechos de um PDF. Também dá para girar e excluir páginas. Tudo acontece no seu navegador, sem enviar o arquivo.',
+    summary: 'Texto, assinatura, desenhos, destaques e páginas giradas ou excluídas.',
+    metaTitle: 'Editar PDF grátis: escreva, assine e destaque no PDF',
+    metaDescription:
+      'Edite PDF online, de graça e sem cadastro: adicione texto, assinatura e imagens, desenhe, destaque, tape trechos e gire ou exclua páginas. O arquivo não sai do seu aparelho.',
+    steps: [
+      { title: 'Escolha o PDF', text: 'Arraste o arquivo para a folha ou toque em “Escolher PDF”. As páginas aparecem logo abaixo das ferramentas.' },
+      { title: 'Edite', text: 'Escolha uma ferramenta (Texto, Desenhar, Retângulo, Tapar, Destacar ou Imagem) e toque na página. Use “Selecionar” para mover e redimensionar.' },
+      { title: 'Salve', text: 'Toque em “Salvar PDF editado”. O arquivo é gerado no seu aparelho e baixado em seguida.' },
+    ],
+    notes: [
+      'As edições são desenhadas por cima da página. O conteúdo original continua no arquivo, com texto selecionável e a qualidade de antes.',
+      'Para trocar um trecho de texto, use “Tapar” sobre ele e escreva o novo texto por cima com a ferramenta “Texto”.',
+      'O texto adicionado usa a fonte Helvetica. Letras fora do alfabeto latino (como chinês ou árabe) não são suportadas.',
+      'PDFs protegidos por senha ou com restrição de edição não podem ser editados.',
+    ],
+    faqs: [
+      {
+        q: 'Dá para alterar o texto que já está no PDF?',
+        a: 'Não diretamente. Use a ferramenta “Tapar” para cobrir o trecho com um retângulo branco e escreva o texto novo por cima com “Texto”. No arquivo salvo, o trecho tapado fica escondido.',
+      },
+      {
+        q: 'Como assino um PDF?',
+        a: 'Use “Desenhar” para assinar com o dedo ou o mouse, ou “Imagem” para colocar uma foto da sua assinatura (PNG com fundo transparente fica melhor). Depois, arraste e redimensione com “Selecionar”.',
+      },
+      {
+        q: 'O tapado esconde o texto de verdade?',
+        a: 'Ele cobre o trecho visualmente, mas o texto original continua no arquivo e pode ser copiado. Para dados sigilosos, use um programa de tarjamento (redação) que remova o conteúdo.',
+      },
+      {
+        q: 'Meu PDF é enviado para algum servidor?',
+        a: 'Não. O PDF é aberto, editado e salvo pelo próprio navegador. Nada sai do seu aparelho.',
+      },
+    ],
+  },
+  {
     id: 'juntar',
     path: '/conversores/juntar-pdf',
     name: 'Juntar PDF',
@@ -224,7 +268,7 @@ export const HOME_FAQS = [
   },
   {
     q: 'Quais formatos posso converter?',
-    a: 'Documentos Word (.docx) e texto (.txt), planilhas (.xlsx, .xls, .ods, .csv) e imagens (.jpg, .png, .webp). Também dá para juntar vários PDFs, e misturar esses formatos, em um único arquivo.',
+    a: 'Documentos Word (.docx) e texto (.txt), planilhas (.xlsx, .xls, .ods, .csv) e imagens (.jpg, .png, .webp). Também dá para juntar vários PDFs, e misturar esses formatos, em um único arquivo, e editar PDFs.',
   },
   {
     q: 'Funciona no celular?',
