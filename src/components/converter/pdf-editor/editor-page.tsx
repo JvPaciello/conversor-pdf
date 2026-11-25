@@ -12,13 +12,17 @@ import {
   type Rotation,
 } from '@/lib/pdf/edit-geometry';
 import { TEXT_LINE_HEIGHT, type EditImage, type EditItem, type EditPage } from '@/lib/pdf/edit-pdf';
+import { itemViewBox, snapBox, type Box, type Guide } from '@/lib/pdf/edit-snap';
 import type { PageInfo, PDFDocumentProxy, RenderTask } from '@/lib/pdf/pdf-render';
 import { IconButton } from '../parts';
+import { FONT_FAMILY, measureLines, measureTextPt } from './measure';
 import { HIGHLIGHT_COLOR, newId, WHITEOUT_COLOR, type EditorTool, type UpdateItem } from './types';
 
-const FONT_FAMILY = 'Helvetica, Arial, sans-serif';
 const MAX_CANVAS_PIXELS = 16_000_000;
 const MIN_BOX = 6;
+/** Snapping distance, in screen pixels. */
+const SNAP_PX = 6;
+const GUIDE_COLOR = '#e5368c';
 
 export interface PendingImage {
   image: EditImage;
@@ -37,6 +41,8 @@ interface Props {
   textSize: number;
   lineWidth: number;
   selectedId: string | null;
+  /** Snap to the page and other items while moving, and show reference lines. */
+  snap: boolean;
   pendingImage: PendingImage | null;
   imageUrl: (image: EditImage) => string;
   onSelect: (id: string | null) => void;
@@ -63,6 +69,11 @@ export function EditorPage(props: Props) {
   const [visible, setVisible] = useState(false);
   const [rendered, setRendered] = useState(false);
   const [draft, setDraft] = useState<Draft>(null);
+  const [guides, setGuides] = useState<Guide[]>([]);
+
+  /** Boxes of the other items on this page, to line up with. */
+  const otherBoxes = (except: string): Box[] =>
+    edit.items.filter((i) => i.id !== except).map((i) => itemViewBox(i, info.box, rotation, measureTextPt));
 
   // Render only pages near the screen.
   useEffect(() => {
@@ -266,6 +277,20 @@ export function EditorPage(props: Props) {
               onSelect={props.onSelect}
               onUpdate={props.onUpdate}
               onRecord={props.onRecord}
+              snapping={props.snap ? { others: otherBoxes, page: size, threshold: SNAP_PX / scale } : null}
+              onGuides={setGuides}
+            />
+          ))}
+          {guides.map((g, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className="pointer-events-none absolute"
+              style={
+                g.axis === 'x'
+                  ? { left: g.at * scale, top: g.from * scale, height: (g.to - g.from) * scale, borderLeft: `1px ${g.source === 'page' ? 'dashed' : 'solid'} ${GUIDE_COLOR}` }
+                  : { top: g.at * scale, left: g.from * scale, width: (g.to - g.from) * scale, borderTop: `1px ${g.source === 'page' ? 'dashed' : 'solid'} ${GUIDE_COLOR}` }
+              }
             />
           ))}
           {draft && <DraftView draft={draft} scale={scale} tool={tool} color={props.color} lineWidth={props.lineWidth} />}
@@ -342,9 +367,12 @@ interface ItemViewProps {
   onSelect: (id: string | null) => void;
   onUpdate: UpdateItem;
   onRecord: () => void;
+  snapping: { others: (except: string) => Box[]; page: { width: number; height: number }; threshold: number } | null;
+  onGuides: (guides: Guide[]) => void;
 }
 
-function ItemView({ item, rotation, info, scale, selected, interactive, tool, imageUrl, onSelect, onUpdate, onRecord }: ItemViewProps) {
+function ItemView(props: ItemViewProps) {
+  const { item, rotation, info, scale, selected, interactive, tool, imageUrl, onSelect, onUpdate, onRecord, snapping, onGuides } = props;
   const at = pdfToView(item.anchor, info.box, rotation);
   // Typing is saved for “Desfazer” once per editing session, on the first change.
   const typing = useRef(false);
@@ -361,6 +389,8 @@ function ItemView({ item, rotation, info, scale, selected, interactive, tool, im
     const startAt = at;
     const startW = 'w' in item ? item.w : 0;
     const startH = 'h' in item ? item.h : 0;
+    const startBox = itemViewBox(item, info.box, rotation, measureTextPt);
+    const others = snapping?.others(item.id) ?? [];
     let recorded = false;
 
     const move = (e: PointerEvent) => {
@@ -370,9 +400,30 @@ function ItemView({ item, rotation, info, scale, selected, interactive, tool, im
         onRecord();
         recorded = true;
       }
+      // Alt (Option) turns snapping off for this movement.
+      const snap = snapping && !e.altKey;
       if (mode === 'move') {
+        if (snap) {
+          const moved = { ...startBox, x: startBox.x + delta.x, y: startBox.y + delta.y };
+          const { dx, dy, guides } = snapBox(moved, others, snapping.page, snapping.threshold);
+          delta.x += dx;
+          delta.y += dy;
+          onGuides(guides);
+        } else {
+          onGuides([]);
+        }
         onUpdate(item.id, { anchor: viewToPdf({ x: startAt.x + delta.x, y: startAt.y + delta.y }, info.box, rotation) }, false);
         return;
+      }
+      // Resizing snaps the far edges, on items shown upright.
+      if (snap && turn === 0) {
+        const grown = { ...startBox, w: startBox.w + delta.x, h: startBox.h + delta.y };
+        const { dx, dy, guides } = snapBox(grown, others, snapping.page, snapping.threshold, 'end');
+        delta.x += dx;
+        delta.y += item.kind === 'image' ? 0 : dy;
+        onGuides(item.kind === 'image' ? guides.filter((g) => g.axis === 'x') : guides);
+      } else {
+        onGuides([]);
       }
       // Resize happens in the item's own frame.
       const local = rotateVector(delta, normalizeRotation(item.rot - rotation));
@@ -384,6 +435,7 @@ function ItemView({ item, rotation, info, scale, selected, interactive, tool, im
       }
     };
     const up = () => {
+      onGuides([]);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
@@ -487,14 +539,6 @@ function ItemView({ item, rotation, info, scale, selected, interactive, tool, im
       )}
     </div>
   );
-}
-
-let measureCanvas: HTMLCanvasElement | null = null;
-function measureLines(lines: string[], fontPx: number) {
-  measureCanvas ??= document.createElement('canvas');
-  const ctx = measureCanvas.getContext('2d')!;
-  ctx.font = `${fontPx}px ${FONT_FAMILY}`;
-  return Math.max(...lines.map((line) => ctx.measureText(line).width));
 }
 
 function TextBox({

@@ -190,6 +190,8 @@ export const TOOLS: Tool[] = [
     notes: [
       'As edições são desenhadas por cima da página. O conteúdo original continua no arquivo, com texto selecionável e a qualidade de antes.',
       'Para trocar um trecho de texto, use “Tapar” sobre ele e escreva o novo texto por cima com a ferramenta “Texto”.',
+      'Ao mover um item, linhas de referência aparecem quando ele se alinha ao centro ou às bordas da página ou a outro item, e ele se encaixa sozinho. Segure Alt para mover livremente, ou use as setas do teclado para ajustes finos.',
+      'Use o botão de tela cheia para editar com mais espaço, principalmente no celular.',
       'O texto adicionado usa a fonte Helvetica. Letras fora do alfabeto latino (como chinês ou árabe) não são suportadas.',
       'PDFs protegidos por senha ou com restrição de edição não podem ser editados.',
     ],
@@ -201,6 +203,10 @@ export const TOOLS: Tool[] = [
       {
         q: 'Como assino um PDF?',
         a: 'Use “Desenhar” para assinar com o dedo ou o mouse, ou “Imagem” para colocar uma foto da sua assinatura (PNG com fundo transparente fica melhor). Depois, arraste e redimensione com “Selecionar”.',
+      },
+      {
+        q: 'Como alinho ou centralizo um texto?',
+        a: 'Ao arrastar um item, linhas rosa aparecem quando ele fica alinhado à borda ou ao centro de outro item ou ao centro da página, e ele se encaixa nessa posição. Com um item selecionado, os botões de centralizar o colocam no meio da página, na horizontal ou na vertical.',
       },
       {
         q: 'O tapado esconde o texto de verdade?',

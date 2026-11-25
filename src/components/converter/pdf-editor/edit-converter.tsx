@@ -1,9 +1,14 @@
 'use client';
 
 import {
+  AlignHorizontalJustifyCenter,
+  AlignVerticalJustifyCenter,
   Eraser,
   Highlighter,
   ImagePlus,
+  Magnet,
+  Maximize2,
+  Minimize2,
   MousePointer2,
   Pencil,
   Square,
@@ -13,7 +18,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { normalizeRotation, pdfToView, viewSize, viewToPdf, type Point } from '@/lib/pdf/edit-geometry';
 import type { EditImage, EditItem, EditPage } from '@/lib/pdf/edit-pdf';
+import { itemViewBox, type Box } from '@/lib/pdf/edit-snap';
 import type { PageInfo, PDFDocumentProxy } from '@/lib/pdf/pdf-render';
 import { baseName } from '@/lib/format';
 import { getTool } from '@/lib/tools';
@@ -21,13 +28,14 @@ import { Dropzone } from '../dropzone';
 import { ErrorNote, FileRow, Progress, ResultPanel } from '../parts';
 import { describeError, useConversion } from '../use-conversion';
 import { EditorPage, type PendingImage } from './editor-page';
+import { measureTextPt } from './measure';
 import { COLORS, LINE_WIDTHS, newId, TEXT_SIZES, type EditorTool, type UpdateItem } from './types';
 
 const tool = getTool('editar');
 const MAX_HISTORY = 100;
 
 const TOOLS: { id: EditorTool; label: string; icon: LucideIcon; hint: string }[] = [
-  { id: 'select', label: 'Selecionar', icon: MousePointer2, hint: 'Toque em um item para selecionar, arraste para mover e use o canto para redimensionar.' },
+  { id: 'select', label: 'Selecionar', icon: MousePointer2, hint: 'Toque em um item para selecionar, arraste para mover e use o canto para redimensionar. As linhas rosa mostram quando ele está alinhado.' },
   { id: 'text', label: 'Texto', icon: Type, hint: 'Toque na página onde quer escrever.' },
   { id: 'draw', label: 'Desenhar', icon: Pencil, hint: 'Desenhe ou assine com o dedo ou o mouse.' },
   { id: 'rect', label: 'Retângulo', icon: Square, hint: 'Arraste para desenhar um retângulo.' },
@@ -66,6 +74,9 @@ export function EditConverter({ initialFiles }: { initialFiles?: File[] }) {
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [width, setWidth] = useState(0);
+  const [snap, setSnap] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
+  const shell = useRef<HTMLDivElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const imageUrls = useRef(new Map<string, string>());
   const { state, run, reset } = useConversion();
@@ -182,25 +193,92 @@ export function EditConverter({ initialFiles }: { initialFiles?: File[] }) {
     change((pages) => pages.map((p, i) => (i === page ? { ...p, items: [...p.items, item] } : p)));
   };
 
-  // Keyboard: Delete removes the selected item, Ctrl/Cmd+Z undoes.
+  /** Shifts the selected item, in screen directions, by what `delta` returns for its box on the page. */
+  const moveSelected = (delta: (box: Box, page: { width: number; height: number }) => Point, save = true) => {
+    if (!loaded || !selectedId) return;
+    const index = edits.findIndex((p) => p.items.some((i) => i.id === selectedId));
+    if (index < 0) return;
+    const item = edits[index].items.find((i) => i.id === selectedId)!;
+    const info = loaded.pages[index];
+    const rotation = normalizeRotation(info.rotation + edits[index].rotate);
+    const d = delta(itemViewBox(item, info.box, rotation, measureTextPt), viewSize(info.box, rotation));
+    if (Math.abs(d.x) < 0.01 && Math.abs(d.y) < 0.01) return;
+    const at = pdfToView(item.anchor, info.box, rotation);
+    updateItem(item.id, { anchor: viewToPdf({ x: at.x + d.x, y: at.y + d.y }, info.box, rotation) }, save);
+  };
+
+  const centerSelected = (axis: 'x' | 'y') =>
+    moveSelected((box, page) =>
+      axis === 'x'
+        ? { x: page.width / 2 - (box.x + box.w / 2), y: 0 }
+        : { x: 0, y: page.height / 2 - (box.y + box.h / 2) },
+    );
+
+  const enterFullscreen = () => {
+    setFullscreen(true);
+    // Real fullscreen also hides the browser bars; where it is missing (iPhone), the editor still covers the page.
+    const el = shell.current;
+    if (el?.requestFullscreen && document.fullscreenEnabled) el.requestFullscreen().catch(() => {});
+  };
+
+  const exitFullscreen = useCallback(() => {
+    setFullscreen(false);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }, []);
+
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
+    const onChange = () => {
+      if (!document.fullscreenElement) setFullscreen(false);
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  // While the editor covers the window, the page behind it doesn't scroll.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = 'hidden';
+    return () => {
+      root.style.overflow = previous;
+    };
+  }, [fullscreen]);
+
+  // Keyboard: Delete removes the selected item, arrows nudge it (Shift: 10 pt), Ctrl/Cmd+Z undoes, Esc leaves.
+  const onKey = useRef<(event: KeyboardEvent) => void>(() => {});
+  useEffect(() => {
+    onKey.current = (event) => {
       const target = event.target as HTMLElement;
       if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const step = event.shiftKey ? 10 : 1;
+      const arrows: Record<string, Point> = {
+        ArrowLeft: { x: -step, y: 0 },
+        ArrowRight: { x: step, y: 0 },
+        ArrowUp: { x: 0, y: -step },
+        ArrowDown: { x: 0, y: step },
+      };
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedId) {
         event.preventDefault();
         removeItem(selectedId);
         setSelectedId(null);
+      } else if (event.key in arrows && selectedId) {
+        event.preventDefault();
+        moveSelected(() => arrows[event.key]);
       } else if (event.key === 'z' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
         event.preventDefault();
         undo();
       } else if (event.key === 'Escape') {
-        setSelectedId(null);
+        if (selectedId) setSelectedId(null);
+        else if (fullscreen) exitFullscreen();
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, removeItem, undo]);
+  });
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => onKey.current(event);
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, []);
 
   const chooseTool = (id: EditorTool) => {
     select(null);
@@ -255,6 +333,7 @@ export function EditConverter({ initialFiles }: { initialFiles?: File[] }) {
   };
 
   const restart = () => {
+    exitFullscreen();
     setFile(null);
     setLoaded(null);
     setLoadError(null);
@@ -325,159 +404,221 @@ export function EditConverter({ initialFiles }: { initialFiles?: File[] }) {
     <div className="space-y-5">
       <FileRow file={loaded.file} family="pdf" onRemove={restart} disabled={working} />
 
-      <div className="sticky top-16 z-20 -mx-2 space-y-3 rounded-lg bg-paper/95 px-2 py-3 shadow-[0_1px_0_var(--rule)] backdrop-blur">
-        <div role="toolbar" aria-label="Ferramentas" className="flex flex-wrap gap-1">
-          {TOOLS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={active === id}
-              onClick={() => chooseTool(id)}
-              disabled={working}
-              className="flex min-w-16 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-ink-2 hover:bg-desk hover:text-ink aria-pressed:bg-stamp-wash aria-pressed:text-stamp disabled:opacity-50"
-            >
-              <Icon aria-hidden size={20} />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {showColors && (
-            <div role="radiogroup" aria-label="Cor" className="flex gap-1">
-              {COLORS.map((c) => (
+      {/* In full screen, the same editor covers the whole window. */}
+      <div
+        ref={shell}
+        className={fullscreen ? 'fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-desk' : undefined}
+        role={fullscreen ? 'dialog' : undefined}
+        aria-modal={fullscreen || undefined}
+        aria-label={fullscreen ? `Editando ${loaded.file.name}` : undefined}
+      >
+        <div className={fullscreen ? 'mx-auto max-w-5xl space-y-5 px-3 sm:px-6' : 'space-y-5'}>
+          <div
+            className={`sticky z-20 -mx-2 space-y-3 bg-paper/95 px-2 py-3 shadow-[0_1px_0_var(--rule)] backdrop-blur ${fullscreen ? 'top-0 rounded-b-lg' : 'top-16 rounded-lg'}`}
+          >
+            <div role="toolbar" aria-label="Ferramentas" className="flex flex-wrap gap-1">
+              {TOOLS.map(({ id, label, icon: Icon }) => (
                 <button
-                  key={c.value}
+                  key={id}
                   type="button"
-                  role="radio"
-                  aria-checked={shownColor === c.value}
-                  aria-label={c.label}
-                  title={c.label}
-                  onClick={() => applyStyle({ color: c.value })}
-                  className="size-7 rounded-full border border-ink-3/40 aria-checked:ring-2 aria-checked:ring-stamp aria-checked:ring-offset-2 aria-checked:ring-offset-paper"
-                  style={{ background: c.value }}
-                />
+                  aria-pressed={active === id}
+                  onClick={() => chooseTool(id)}
+                  disabled={working}
+                  className="flex min-w-16 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-ink-2 hover:bg-desk hover:text-ink aria-pressed:bg-stamp-wash aria-pressed:text-stamp disabled:opacity-50"
+                >
+                  <Icon aria-hidden size={20} />
+                  {label}
+                </button>
               ))}
             </div>
-          )}
-          {showTextSize && (
-            <label className="flex items-center gap-2 text-sm">
-              Tamanho
-              <select
-                value={shownSize}
-                onChange={(e) => applyStyle({ size: Number(e.target.value) })}
-                className="rounded-md border border-rule bg-paper px-2 py-1"
-              >
-                {TEXT_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {showLineWidth && (
-            <label className="flex items-center gap-2 text-sm">
-              Traço
-              <select
-                value={shownWidth}
-                onChange={(e) => applyStyle({ lineWidth: Number(e.target.value) })}
-                className="rounded-md border border-rule bg-paper px-2 py-1"
-              >
-                {LINE_WIDTHS.map((w) => (
-                  <option key={w.value} value={w.value}>
-                    {w.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <div className="ml-auto flex gap-1">
-            <button type="button" onClick={undo} disabled={!canUndo || working} className="btn btn-secondary px-3 py-1.5 text-sm">
-              <Undo2 aria-hidden size={16} />
-              Desfazer
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {/* Controls are always shown (disabled when they don't apply) so the toolbar never
+                  changes height under the pointer while an item is selected and dragged. */}
+              <fieldset disabled={!showColors} className="min-w-0 disabled:opacity-40">
+                <div role="radiogroup" aria-label="Cor" className="flex gap-1">
+                  {COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={shownColor === c.value}
+                      aria-label={c.label}
+                      title={c.label}
+                      onClick={() => applyStyle({ color: c.value })}
+                      className="size-7 rounded-full border border-ink-3/40 aria-checked:ring-2 aria-checked:ring-stamp aria-checked:ring-offset-2 aria-checked:ring-offset-paper"
+                      style={{ background: c.value }}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+              <label className={`flex items-center gap-2 text-sm ${showTextSize ? '' : 'opacity-40'}`}>
+                Tamanho
+                <select
+                  disabled={!showTextSize}
+                  value={shownSize}
+                  onChange={(e) => applyStyle({ size: Number(e.target.value) })}
+                  className="rounded-md border border-rule bg-paper px-2 py-1"
+                >
+                  {TEXT_SIZES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={`flex items-center gap-2 text-sm ${showLineWidth ? '' : 'opacity-40'}`}>
+                Traço
+                <select
+                  disabled={!showLineWidth}
+                  value={shownWidth}
+                  onChange={(e) => applyStyle({ lineWidth: Number(e.target.value) })}
+                  className="rounded-md border border-rule bg-paper px-2 py-1"
+                >
+                  {LINE_WIDTHS.map((w) => (
+                    <option key={w.value} value={w.value}>
+                      {w.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="ml-auto flex flex-wrap items-center gap-1">
+                <ToolbarIcon label="Centralizar na horizontal" disabled={!selected} onClick={() => centerSelected('x')}>
+                  <AlignHorizontalJustifyCenter aria-hidden size={18} />
+                </ToolbarIcon>
+                <ToolbarIcon label="Centralizar na vertical" disabled={!selected} onClick={() => centerSelected('y')}>
+                  <AlignVerticalJustifyCenter aria-hidden size={18} />
+                </ToolbarIcon>
+                <ToolbarIcon
+                  label="Linhas de referência e alinhamento automático"
+                  pressed={snap}
+                  onClick={() => setSnap((on) => !on)}
+                >
+                  <Magnet aria-hidden size={18} />
+                </ToolbarIcon>
+                <ToolbarIcon
+                  label={fullscreen ? 'Sair da tela cheia' : 'Editar em tela cheia'}
+                  onClick={fullscreen ? exitFullscreen : enterFullscreen}
+                >
+                  {fullscreen ? <Minimize2 aria-hidden size={18} /> : <Maximize2 aria-hidden size={18} />}
+                </ToolbarIcon>
+                <button type="button" onClick={undo} disabled={!canUndo || working} className="btn btn-secondary px-3 py-1.5 text-sm">
+                  <Undo2 aria-hidden size={16} />
+                  Desfazer
+                </button>
+                <ToolbarIcon
+                  label="Excluir item"
+                  disabled={!selected}
+                  danger
+                  onClick={() => {
+                    if (!selected) return;
+                    removeItem(selected.id);
+                    setSelectedId(null);
+                  }}
+                >
+                  <Trash2 aria-hidden size={18} />
+                </ToolbarIcon>
+              </div>
+            </div>
+
+            <p className="text-sm text-ink-2" aria-live="polite">
+              {active === 'image' && pendingImage
+                ? 'Toque na página para colocar a imagem.'
+                : current.hint}
+            </p>
+            {imageError && <ErrorNote message={imageError} />}
+          </div>
+
+          <input
+            ref={imageInput}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+            onChange={(e) => {
+              onImageChosen(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+
+          <div ref={pagesRef} className="space-y-6">
+            {width > 0 &&
+              edits.map((edit, i) => (
+                <EditorPage
+                  key={i}
+                  index={i}
+                  doc={loaded.doc}
+                  info={loaded.pages[i]}
+                  edit={edit}
+                  width={width}
+                  tool={working ? 'select' : active}
+                  color={color}
+                  textSize={textSize}
+                  lineWidth={lineWidth}
+                  selectedId={selectedId}
+                  snap={snap}
+                  pendingImage={pendingImage}
+                  imageUrl={imageUrl}
+                  onSelect={select}
+                  onAdd={addItem}
+                  onUpdate={updateItem}
+                  onRecord={record}
+                  onImagePlaced={() => {
+                    setPendingImage(null);
+                    setActive('select');
+                  }}
+                  onRotate={(page) =>
+                    change((pages) =>
+                      pages.map((p, j) => (j === page ? { ...p, rotate: ((p.rotate + 90) % 360) as EditPage['rotate'] } : p)),
+                    )
+                  }
+                  onToggleDelete={(page) =>
+                    change((pages) => pages.map((p, j) => (j === page ? { ...p, deleted: !p.deleted } : p)))
+                  }
+                />
+              ))}
+          </div>
+
+          <div className="sticky bottom-0 z-20 -mx-2 space-y-3 bg-paper/95 px-2 py-3 backdrop-blur">
+            {working && <Progress done={0} total={0} label="Salvando o PDF…" />}
+            {state.status === 'error' && <ErrorNote message={state.message} />}
+            <button type="button" onClick={save} disabled={working || kept === 0} className="btn btn-primary w-full">
+              {working ? 'Salvando…' : kept === 0 ? 'Mantenha pelo menos uma página' : 'Salvar PDF editado'}
             </button>
-            {selected && (
-              <button
-                type="button"
-                onClick={() => {
-                  removeItem(selected.id);
-                  setSelectedId(null);
-                }}
-                className="btn btn-secondary px-3 py-1.5 text-sm text-danger"
-              >
-                <Trash2 aria-hidden size={16} />
-                Excluir item
-              </button>
-            )}
           </div>
         </div>
-
-        <p className="text-sm text-ink-2" aria-live="polite">
-          {active === 'image' && pendingImage
-            ? 'Toque na página para colocar a imagem.'
-            : current.hint}
-        </p>
-        {imageError && <ErrorNote message={imageError} />}
-      </div>
-
-      <input
-        ref={imageInput}
-        type="file"
-        accept=".jpg,.jpeg,.png,.webp"
-        className="sr-only"
-        tabIndex={-1}
-        aria-hidden
-        onChange={(e) => {
-          onImageChosen(e.target.files?.[0]);
-          e.target.value = '';
-        }}
-      />
-
-      <div ref={pagesRef} className="space-y-6">
-        {width > 0 &&
-          edits.map((edit, i) => (
-            <EditorPage
-              key={i}
-              index={i}
-              doc={loaded.doc}
-              info={loaded.pages[i]}
-              edit={edit}
-              width={width}
-              tool={working ? 'select' : active}
-              color={color}
-              textSize={textSize}
-              lineWidth={lineWidth}
-              selectedId={selectedId}
-              pendingImage={pendingImage}
-              imageUrl={imageUrl}
-              onSelect={select}
-              onAdd={addItem}
-              onUpdate={updateItem}
-              onRecord={record}
-              onImagePlaced={() => {
-                setPendingImage(null);
-                setActive('select');
-              }}
-              onRotate={(page) =>
-                change((pages) =>
-                  pages.map((p, j) => (j === page ? { ...p, rotate: ((p.rotate + 90) % 360) as EditPage['rotate'] } : p)),
-                )
-              }
-              onToggleDelete={(page) =>
-                change((pages) => pages.map((p, j) => (j === page ? { ...p, deleted: !p.deleted } : p)))
-              }
-            />
-          ))}
-      </div>
-
-      <div className="sticky bottom-0 z-20 -mx-2 space-y-3 bg-paper/95 px-2 py-3 backdrop-blur">
-        {working && <Progress done={0} total={0} label="Salvando o PDF…" />}
-        {state.status === 'error' && <ErrorNote message={state.message} />}
-        <button type="button" onClick={save} disabled={working || kept === 0} className="btn btn-primary w-full">
-          {working ? 'Salvando…' : kept === 0 ? 'Mantenha pelo menos uma página' : 'Salvar PDF editado'}
-        </button>
       </div>
     </div>
+  );
+}
+
+function ToolbarIcon({
+  label,
+  pressed,
+  disabled,
+  danger,
+  onClick,
+  children,
+}: {
+  label: string;
+  pressed?: boolean;
+  disabled?: boolean;
+  danger?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      aria-pressed={pressed}
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex size-9 items-center justify-center rounded-md hover:bg-desk aria-pressed:bg-stamp-wash aria-pressed:text-stamp disabled:opacity-30 disabled:hover:bg-transparent ${danger ? 'text-danger' : 'text-ink-2 hover:text-ink'}`}
+    >
+      {children}
+    </button>
   );
 }
